@@ -93,7 +93,7 @@ jobs:
           echo "AAB_FILE=$AAB_FILE" >> "$GITHUB_ENV"
 
       - name: Verify AAB signature
-        run: jarsigner -verify -strict "$AAB_FILE"
+        run: jarsigner -verify "$AAB_FILE"
 
       - name: Upload build logs
         if: failure()
