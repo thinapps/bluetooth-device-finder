@@ -33,6 +33,7 @@
     <string name="finder_title">Finder Mode</string>
     <string name="finder_description">Move slowly and watch for a stronger reading. Signal strength can fluctuate because of walls, bodies, interference, and device orientation.</string>
     <string name="finder_waiting">Waiting for this device to advertise again…</string>
+    <string name="finder_scan_stopped">Start scanning to update the signal.</string>
     <string name="back_to_devices">Back to devices</string>
     <string name="privacy_policy">Privacy Policy</string>
     <string name="about">About</string>
