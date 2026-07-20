@@ -23,18 +23,18 @@ gradle wrapper --gradle-version 8.11.1
 ./gradlew assembleDebug
 ```
 
-The debug APK is generated under `app/build/outputs/apk/debug/`.
+The debug APK is generated under `app/build/outputs/apk/debug/`. The project can be configured and debug-built without release signing properties.
 
 ## Release Signing
 
-The release build reads these Gradle properties:
+A signed release build reads all four of these Gradle properties:
 
 - `RELEASE_STORE_FILE`
 - `RELEASE_STORE_PASSWORD`
 - `RELEASE_KEY_ALIAS`
 - `RELEASE_KEY_PASSWORD`
 
-GitHub Actions writes the properties from repository secrets and restores the upload keystore only inside the release job.
+Release signing is enabled only when all four properties are available. The manual GitHub Actions workflow validates its repository secrets, writes the properties securely, restores the upload keystore inside the job, builds the AAB, and verifies the resulting signature strictly.
 
 ## Release Configuration
 
