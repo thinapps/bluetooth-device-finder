@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="screen_gutter">20dp</dimen>
+    <dimen name="spacing_small">8dp</dimen>
+    <dimen name="spacing_medium">16dp</dimen>
+    <dimen name="spacing_large">24dp</dimen>
+    <dimen name="card_radius">16dp</dimen>
+    <dimen name="button_height">48dp</dimen>
+    <dimen name="text_title">26sp</dimen>
+    <dimen name="text_heading">20sp</dimen>
+    <dimen name="text_body">16sp</dimen>
+    <dimen name="text_button">15sp</dimen>
+    <dimen name="text_secondary">14sp</dimen>
+    <dimen name="text_caption">12sp</dimen>
+    <dimen name="text_signal">32sp</dimen>
+</resources>

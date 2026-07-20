@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Bluetooth Device Finder</string>
+    <string name="home_title">Bluetooth Device Finder</string>
+    <string name="home_description">Scan for detectable nearby devices, then follow the changing signal strength to help locate one.</string>
+    <string name="status_ready">Ready to scan</string>
+    <string name="status_scanning">Scanning nearby devices…</string>
+    <string name="status_stopped">Scan stopped</string>
+    <string name="status_permission_required">Nearby device access is required to scan.</string>
+    <string name="status_location_required">Location permission is required by older Android versions for Bluetooth scanning.</string>
+    <string name="status_bluetooth_off">Bluetooth must be turned on to scan.</string>
+    <string name="status_unsupported">Bluetooth Low Energy is not available on this device.</string>
+    <string name="status_scan_failed">Bluetooth scanning could not start. Try again in a moment.</string>
+    <string name="status_location_services_off">Location services must be turned on for Bluetooth scanning on this Android version.</string>
+    <string name="scan_devices">Scan devices</string>
+    <string name="stop_scan">Stop scan</string>
+    <string name="open_settings">Open settings</string>
+    <string name="device_count_zero">No devices found yet</string>
+    <string name="device_count_one">1 device found</string>
+    <string name="device_count_many">%1$d devices found</string>
+    <string name="device_unknown">Unknown device</string>
+    <string name="device_paired">Paired</string>
+    <string name="device_nearby">Nearby</string>
+    <string name="signal_format">%1$d dBm · %2$s</string>
+    <string name="signal_very_strong">Very strong</string>
+    <string name="signal_strong">Strong</string>
+    <string name="signal_fair">Fair</string>
+    <string name="signal_weak">Weak</string>
+    <string name="signal_unavailable">Signal unavailable</string>
+    <string name="signal_dash">—</string>
+    <string name="rssi_value">%1$d dBm</string>
+    <string name="finder_title">Finder Mode</string>
+    <string name="finder_description">Move slowly and watch for a stronger reading. Signal strength can fluctuate because of walls, bodies, interference, and device orientation.</string>
+    <string name="finder_waiting">Waiting for this device to advertise again…</string>
+    <string name="back_to_devices">Back to devices</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="about">About</string>
+    <string name="close">Close</string>
+    <string name="footer_separator">·</string>
+    <string name="footer_message">All functions happen locally on your device, with no internet connection required. This app is entirely open source, and the code is available for inspection on GitHub.</string>
+    <string name="privacy_body">Bluetooth Device Finder scans for nearby Bluetooth Low Energy devices only while the app is open. Android may require Nearby devices or location permission, depending on the Android version. Device names, addresses, and signal readings are processed temporarily on your device and are not retained after the app closes. The app has no internet permission and does not use accounts, analytics, advertising, tracking, or remote crash reporting. It does not derive your physical location or transmit Bluetooth information.</string>
+    <string name="about_body">Bluetooth Device Finder helps locate detectable Bluetooth devices using changing signal strength. It does not estimate exact distance, identify hidden cameras, or guarantee that every Bluetooth device can be found. Devices must be powered on, within range, and actively detectable.</string>
+</resources>
