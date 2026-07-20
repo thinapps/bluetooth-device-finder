@@ -2,6 +2,8 @@
 
 Find nearby detectable Bluetooth devices and follow live signal strength to help locate one.
 
+Current status: early development prototype; not yet production-ready.
+
 | Document | Description |
 | --- | --- |
 | [Build](docs/build.md) | Lists the Android toolchain, build commands, signing requirements, and generated artifacts. |
