@@ -28,6 +28,7 @@ import android.view.Window
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.location.LocationManagerCompat
 import androidx.core.view.ViewCompat
@@ -50,8 +51,9 @@ class MainActivity : AppCompatActivity() {
     private var bluetoothLeScanner: BluetoothLeScanner? = null
     private var isScanning = false
     private var scanRequested = false
-    private var permissionRejected = false
+    private var permissionPermanentlyDenied = false
     private var legacyLocationUnavailable = false
+    private var renderScheduled = false
     private var selectedAddress: String? = null
     private var selectedName: String? = null
 
@@ -60,11 +62,15 @@ class MainActivity : AppCompatActivity() {
     ) { results ->
         val granted = results.values.all { value -> value }
         if (granted) {
-            permissionRejected = false
+            permissionPermanentlyDenied = false
             beginBluetoothCheck()
         } else {
             scanRequested = false
-            permissionRejected = true
+            permissionPermanentlyDenied = requiredPermissions().any { permission ->
+                ContextCompat.checkSelfPermission(this, permission) !=
+                    PackageManager.PERMISSION_GRANTED &&
+                    !ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
+            }
             showPermissionRequired()
         }
     }
@@ -100,11 +106,19 @@ class MainActivity : AppCompatActivity() {
                 isScanning = false
                 scanRequested = false
                 mainHandler.removeCallbacks(staleDeviceRunnable)
+                mainHandler.removeCallbacks(renderRunnable)
+                renderScheduled = false
                 binding.statusText.setText(R.string.status_scan_failed)
                 binding.scanButton.setText(R.string.scan_devices)
                 binding.finderScanButton.setText(R.string.scan_devices)
             }
         }
+    }
+
+    private val renderRunnable = Runnable {
+        renderScheduled = false
+        renderDevices()
+        renderFinder()
     }
 
     private val staleDeviceRunnable = object : Runnable {
@@ -122,8 +136,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            renderDevices()
-            renderFinder()
+            scheduleRender()
             mainHandler.postDelayed(this, DEVICE_REFRESH_INTERVAL_MS)
         }
     }
@@ -209,8 +222,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (permissionRejected && hasRequiredPermissions()) {
-            permissionRejected = false
+        if (permissionPermanentlyDenied && hasRequiredPermissions()) {
+            permissionPermanentlyDenied = false
             binding.statusText.setText(R.string.status_ready)
             binding.scanButton.setText(R.string.scan_devices)
             binding.finderScanButton.setText(R.string.scan_devices)
@@ -242,7 +255,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (permissionRejected && !hasRequiredPermissions()) {
+        if (permissionPermanentlyDenied && !hasRequiredPermissions()) {
             openAppSettings()
             return
         }
@@ -312,7 +325,7 @@ class MainActivity : AppCompatActivity() {
             scanner.startScan(null, settings, scanCallback)
             isScanning = true
             scanRequested = true
-            permissionRejected = false
+            permissionPermanentlyDenied = false
             binding.statusText.setText(R.string.status_scanning)
             binding.scanButton.setText(R.string.stop_scan)
             binding.finderScanButton.setText(R.string.stop_scan)
@@ -344,6 +357,10 @@ class MainActivity : AppCompatActivity() {
             scanRequested = false
         }
         mainHandler.removeCallbacks(staleDeviceRunnable)
+        mainHandler.removeCallbacks(renderRunnable)
+        renderScheduled = false
+        renderDevices()
+        renderFinder()
 
         if (clearRequest) {
             binding.statusText.setText(R.string.status_stopped)
@@ -397,8 +414,16 @@ class MainActivity : AppCompatActivity() {
             selectedName = resolvedName
         }
 
-        renderDevices()
-        renderFinder()
+        scheduleRender()
+    }
+
+    private fun scheduleRender() {
+        if (renderScheduled) {
+            return
+        }
+
+        renderScheduled = true
+        mainHandler.postDelayed(renderRunnable, DEVICE_RENDER_INTERVAL_MS)
     }
 
     private fun renderDevices() {
@@ -491,8 +516,13 @@ class MainActivity : AppCompatActivity() {
                 R.string.status_location_required
             }
         )
-        binding.scanButton.setText(R.string.open_settings)
-        binding.finderScanButton.setText(R.string.open_settings)
+        val buttonText = if (permissionPermanentlyDenied) {
+            R.string.open_settings
+        } else {
+            R.string.allow_access
+        }
+        binding.scanButton.setText(buttonText)
+        binding.finderScanButton.setText(buttonText)
     }
 
     @SuppressLint("MissingPermission")
@@ -548,6 +578,7 @@ class MainActivity : AppCompatActivity() {
 
         private const val DEVICE_STALE_AFTER_MS = 15_000L
         private const val DEVICE_REFRESH_INTERVAL_MS = 1_000L
+        private const val DEVICE_RENDER_INTERVAL_MS = 250L
         private const val RSSI_SMOOTHING_ALPHA = 0.25
         private const val RSSI_MIN = -100
         private const val RSSI_MAX = -35
