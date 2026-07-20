@@ -1,0 +1,2 @@
+rootProject.name = "BluetoothDeviceFinder"
+include ":app"

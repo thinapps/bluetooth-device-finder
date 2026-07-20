@@ -1,0 +1,73 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
+
+android {
+    namespace "top.thinapps.bluetoothdevicefinder"
+    compileSdk 36
+
+    defaultConfig {
+        applicationId "top.thinapps.bluetoothdevicefinder"
+
+        // supported and target api levels
+        minSdk 24
+        targetSdk 36
+
+        // bump before each release
+        versionCode 1
+        versionName "0.1.0"
+    }
+
+    signingConfigs {
+        release {
+            // github actions writes values to ~/.gradle/gradle.properties
+            storeFile file(project.findProperty("RELEASE_STORE_FILE"))
+            storePassword project.findProperty("RELEASE_STORE_PASSWORD")
+            keyAlias project.findProperty("RELEASE_KEY_ALIAS")
+            keyPassword project.findProperty("RELEASE_KEY_PASSWORD")
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+
+            // keep r8 off until shrinking is necessary
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+
+    buildFeatures {
+        // generate binding classes for xml layouts
+        viewBinding true
+    }
+
+    compileOptions {
+        // keep java and kotlin bytecode targets aligned
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.fromTarget("17")
+    }
+}
+
+dependencies {
+    // kotlin runtime
+    implementation platform("org.jetbrains.kotlin:kotlin-bom:2.2.21")
+    implementation "org.jetbrains.kotlin:kotlin-stdlib"
+
+    // androidx app support
+    implementation "androidx.core:core-ktx:1.15.0"
+    implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.activity:activity-ktx:1.9.3"
+    implementation "androidx.recyclerview:recyclerview:1.4.0"
+
+    // material ui controls
+    implementation "com.google.android.material:material:1.13.0"
+}
