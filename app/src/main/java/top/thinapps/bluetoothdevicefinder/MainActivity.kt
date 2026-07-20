@@ -37,6 +37,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import top.thinapps.bluetoothdevicefinder.databinding.ActivityMainBinding
 import top.thinapps.bluetoothdevicefinder.databinding.DialogInformationBinding
+import java.util.Locale
 import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
@@ -65,12 +66,8 @@ class MainActivity : AppCompatActivity() {
             permissionPermanentlyDenied = false
             beginBluetoothCheck()
         } else {
-            scanRequested = false
-            permissionPermanentlyDenied = requiredPermissions().any { permission ->
-                ContextCompat.checkSelfPermission(this, permission) !=
-                    PackageManager.PERMISSION_GRANTED &&
-                    !ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
-            }
+            resetScanState(clearRequest = true)
+            permissionPermanentlyDenied = hasPermanentlyDeniedPermission()
             showPermissionRequired()
             renderFinder()
         }
@@ -79,13 +76,14 @@ class MainActivity : AppCompatActivity() {
     private val enableBluetoothLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
-        if (isBluetoothEnabled()) {
+        if (!hasRequiredPermissions()) {
+            handlePermissionLoss()
+        } else if (isBluetoothEnabled()) {
             startBleScan(clearExisting = true)
         } else {
-            scanRequested = false
+            resetScanState(clearRequest = true)
             binding.statusText.setText(R.string.status_bluetooth_off)
-            binding.scanButton.setText(R.string.scan_devices)
-            binding.finderScanButton.setText(R.string.scan_devices)
+            setScanButtonText(R.string.scan_devices)
             renderFinder()
         }
     }
@@ -105,25 +103,18 @@ class MainActivity : AppCompatActivity() {
 
         override fun onScanFailed(errorCode: Int) {
             runOnUiThread {
-                isScanning = false
-                scanRequested = false
-                bluetoothLeScanner = null
-                mainHandler.removeCallbacks(staleDeviceRunnable)
-                mainHandler.removeCallbacks(renderRunnable)
-                renderScheduled = false
-                binding.statusText.setText(R.string.status_scan_failed)
-                binding.scanButton.setText(R.string.scan_devices)
-                binding.finderScanButton.setText(R.string.scan_devices)
-                renderDevices()
-                renderFinder()
+                showScanFailure()
             }
         }
     }
 
     private val renderRunnable = Runnable {
         renderScheduled = false
-        renderDevices()
-        renderFinder()
+        if (binding.finderPanel.isVisible) {
+            renderFinder()
+        } else {
+            renderDevices()
+        }
     }
 
     private val staleDeviceRunnable = object : Runnable {
@@ -221,24 +212,38 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (scanRequested && !isScanning && hasRequiredPermissions()) {
-            beginBluetoothCheck(clearExisting = false)
+
+        if (!scanRequested || isScanning) {
+            return
         }
+
+        if (!hasRequiredPermissions()) {
+            scanRequested = false
+            permissionPermanentlyDenied = hasPermanentlyDeniedPermission()
+            showPermissionRequired()
+            renderFinder()
+            return
+        }
+
+        devices.clear()
+        renderDevices()
+        renderFinder()
+        beginBluetoothCheck(clearExisting = false)
     }
 
     override fun onResume() {
         super.onResume()
+
         if (permissionPermanentlyDenied && hasRequiredPermissions()) {
             permissionPermanentlyDenied = false
             binding.statusText.setText(R.string.status_ready)
-            binding.scanButton.setText(R.string.scan_devices)
-            binding.finderScanButton.setText(R.string.scan_devices)
+            setScanButtonText(R.string.scan_devices)
         }
+
         if (legacyLocationUnavailable && isLegacyLocationEnabled()) {
             legacyLocationUnavailable = false
             binding.statusText.setText(R.string.status_ready)
-            binding.scanButton.setText(R.string.scan_devices)
-            binding.finderScanButton.setText(R.string.scan_devices)
+            setScanButtonText(R.string.scan_devices)
         }
     }
 
@@ -285,8 +290,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun beginBluetoothCheck(clearExisting: Boolean = true) {
+        if (!hasRequiredPermissions()) {
+            handlePermissionLoss()
+            return
+        }
+
         if (bluetoothAdapter == null) {
+            scanRequested = false
             binding.statusText.setText(R.string.status_unsupported)
+            setScanButtonText(R.string.scan_devices)
+            renderFinder()
             return
         }
 
@@ -294,13 +307,13 @@ class MainActivity : AppCompatActivity() {
             scanRequested = false
             legacyLocationUnavailable = true
             binding.statusText.setText(R.string.status_location_services_off)
-            binding.scanButton.setText(R.string.open_settings)
-            binding.finderScanButton.setText(R.string.open_settings)
+            setScanButtonText(R.string.open_settings)
             renderFinder()
             return
         }
 
         if (!isBluetoothEnabled()) {
+            scanRequested = false
             enableBluetoothLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
             return
         }
@@ -312,16 +325,24 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("MissingPermission")
     private fun startBleScan(clearExisting: Boolean) {
         if (!hasRequiredPermissions()) {
-            showPermissionRequired()
-            renderFinder()
+            handlePermissionLoss()
             return
         }
 
-        val adapter = bluetoothAdapter ?: return
-        val scanner = adapter.bluetoothLeScanner
+        val adapter = bluetoothAdapter
+        if (adapter == null) {
+            showScanFailure()
+            return
+        }
+
+        val scanner = try {
+            adapter.bluetoothLeScanner
+        } catch (exception: SecurityException) {
+            handlePermissionLoss()
+            return
+        }
         if (scanner == null) {
-            binding.statusText.setText(R.string.status_scan_failed)
-            renderFinder()
+            showScanFailure()
             return
         }
 
@@ -341,25 +362,32 @@ class MainActivity : AppCompatActivity() {
             scanRequested = true
             permissionPermanentlyDenied = false
             binding.statusText.setText(R.string.status_scanning)
-            binding.scanButton.setText(R.string.stop_scan)
-            binding.finderScanButton.setText(R.string.stop_scan)
+            setScanButtonText(R.string.stop_scan)
             renderDevices()
             renderFinder()
             mainHandler.removeCallbacks(staleDeviceRunnable)
             mainHandler.postDelayed(staleDeviceRunnable, DEVICE_REFRESH_INTERVAL_MS)
         } catch (exception: SecurityException) {
-            scanRequested = false
-            showPermissionRequired()
-            renderFinder()
+            handlePermissionLoss()
         } catch (exception: IllegalStateException) {
-            scanRequested = false
-            binding.statusText.setText(R.string.status_scan_failed)
-            renderFinder()
+            showScanFailure()
         }
     }
 
     @SuppressLint("MissingPermission")
     private fun stopBleScan(clearRequest: Boolean) {
+        resetScanState(clearRequest)
+        renderDevices()
+        renderFinder()
+
+        if (clearRequest) {
+            binding.statusText.setText(R.string.status_stopped)
+            setScanButtonText(R.string.scan_devices)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun resetScanState(clearRequest: Boolean) {
         if (isScanning) {
             try {
                 bluetoothLeScanner?.stopScan(scanCallback)
@@ -370,20 +398,30 @@ class MainActivity : AppCompatActivity() {
 
         isScanning = false
         bluetoothLeScanner = null
+
         if (clearRequest) {
             scanRequested = false
         }
+
         mainHandler.removeCallbacks(staleDeviceRunnable)
         mainHandler.removeCallbacks(renderRunnable)
         renderScheduled = false
+    }
+
+    private fun handlePermissionLoss() {
+        resetScanState(clearRequest = true)
+        permissionPermanentlyDenied = hasPermanentlyDeniedPermission()
+        showPermissionRequired()
         renderDevices()
         renderFinder()
+    }
 
-        if (clearRequest) {
-            binding.statusText.setText(R.string.status_stopped)
-            binding.scanButton.setText(R.string.scan_devices)
-            binding.finderScanButton.setText(R.string.scan_devices)
-        }
+    private fun showScanFailure() {
+        resetScanState(clearRequest = true)
+        binding.statusText.setText(R.string.status_scan_failed)
+        setScanButtonText(R.string.scan_devices)
+        renderDevices()
+        renderFinder()
     }
 
     @SuppressLint("MissingPermission")
@@ -392,7 +430,12 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        val address = result.device.address ?: return
+        val address = try {
+            result.device.address
+        } catch (exception: SecurityException) {
+            handlePermissionLoss()
+            return
+        } ?: return
         val existing = devices[address]
         val advertisedName = result.scanRecord?.deviceName?.trim()
         val deviceName = try {
@@ -446,14 +489,17 @@ class MainActivity : AppCompatActivity() {
     private fun renderDevices() {
         val sortedDevices = devices.values.sortedWith(
             compareByDescending<NearbyDevice> { device -> device.smoothedRssi }
-                .thenBy { device -> device.name.lowercase() }
+                .thenBy { device -> device.name.lowercase(Locale.ROOT) }
         )
         deviceAdapter.submitDevices(sortedDevices)
 
-        binding.statusDetailText.text = when (sortedDevices.size) {
+        val countText = when (sortedDevices.size) {
             0 -> getString(R.string.device_count_zero)
             1 -> getString(R.string.device_count_one)
             else -> getString(R.string.device_count_many, sortedDevices.size)
+        }
+        if (binding.statusDetailText.text.toString() != countText) {
+            binding.statusDetailText.text = countText
         }
     }
 
@@ -470,6 +516,7 @@ class MainActivity : AppCompatActivity() {
         selectedName = null
         binding.finderPanel.isVisible = false
         binding.homePanel.isVisible = true
+        renderDevices()
     }
 
     private fun renderFinder() {
@@ -491,7 +538,10 @@ class MainActivity : AppCompatActivity() {
         }
 
         val displayedRssi = device.smoothedRssi.roundToInt()
-        binding.finderSignalLabel.setText(SignalStrength.labelResource(displayedRssi))
+        val signalLabel = getString(SignalStrength.labelResource(displayedRssi))
+        if (binding.finderSignalLabel.text.toString() != signalLabel) {
+            binding.finderSignalLabel.text = signalLabel
+        }
         binding.finderSignalValue.text = getString(R.string.rssi_value, displayedRssi)
         binding.finderSignalProgress.setProgressCompat(
             SignalStrength.progress(displayedRssi),
@@ -501,11 +551,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showUnavailableFinderSignal(messageResource: Int) {
-        binding.finderSignalLabel.setText(R.string.signal_unavailable)
+        val unavailableLabel = getString(R.string.signal_unavailable)
+        if (binding.finderSignalLabel.text.toString() != unavailableLabel) {
+            binding.finderSignalLabel.text = unavailableLabel
+        }
         binding.finderSignalValue.setText(R.string.signal_dash)
         binding.finderSignalProgress.setProgressCompat(0, true)
         binding.finderWaitingText.setText(messageResource)
         binding.finderWaitingText.isVisible = true
+    }
+
+    private fun setScanButtonText(textResource: Int) {
+        binding.scanButton.setText(textResource)
+        binding.finderScanButton.setText(textResource)
     }
 
     private fun requiredPermissions(): Array<String> {
@@ -525,6 +583,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun hasPermanentlyDeniedPermission(): Boolean {
+        return requiredPermissions().any { permission ->
+            ContextCompat.checkSelfPermission(this, permission) !=
+                PackageManager.PERMISSION_GRANTED &&
+                !ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
+        }
+    }
+
     private fun showPermissionRequired() {
         binding.statusText.setText(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -538,8 +604,7 @@ class MainActivity : AppCompatActivity() {
         } else {
             R.string.allow_access
         }
-        binding.scanButton.setText(buttonText)
-        binding.finderScanButton.setText(buttonText)
+        setScanButtonText(buttonText)
     }
 
     @SuppressLint("MissingPermission")
