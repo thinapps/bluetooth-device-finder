@@ -3,6 +3,15 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 
+def releaseStoreFile = project.findProperty("RELEASE_STORE_FILE")
+def releaseStorePassword = project.findProperty("RELEASE_STORE_PASSWORD")
+def releaseKeyAlias = project.findProperty("RELEASE_KEY_ALIAS")
+def releaseKeyPassword = project.findProperty("RELEASE_KEY_PASSWORD")
+def hasReleaseSigning = releaseStoreFile != null &&
+    releaseStorePassword != null &&
+    releaseKeyAlias != null &&
+    releaseKeyPassword != null
+
 android {
     namespace "top.thinapps.bluetoothdevicefinder"
     compileSdk 36
@@ -22,16 +31,20 @@ android {
     signingConfigs {
         release {
             // github actions writes values to ~/.gradle/gradle.properties
-            storeFile file(project.findProperty("RELEASE_STORE_FILE"))
-            storePassword project.findProperty("RELEASE_STORE_PASSWORD")
-            keyAlias project.findProperty("RELEASE_KEY_ALIAS")
-            keyPassword project.findProperty("RELEASE_KEY_PASSWORD")
+            if (hasReleaseSigning) {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.release
+            if (hasReleaseSigning) {
+                signingConfig signingConfigs.release
+            }
 
             // keep r8 off until shrinking is necessary
             minifyEnabled false
