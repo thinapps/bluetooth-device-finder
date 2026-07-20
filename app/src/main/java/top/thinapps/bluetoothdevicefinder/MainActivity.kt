@@ -72,6 +72,7 @@ class MainActivity : AppCompatActivity() {
                     !ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
             }
             showPermissionRequired()
+            renderFinder()
         }
     }
 
@@ -85,6 +86,7 @@ class MainActivity : AppCompatActivity() {
             binding.statusText.setText(R.string.status_bluetooth_off)
             binding.scanButton.setText(R.string.scan_devices)
             binding.finderScanButton.setText(R.string.scan_devices)
+            renderFinder()
         }
     }
 
@@ -105,12 +107,15 @@ class MainActivity : AppCompatActivity() {
             runOnUiThread {
                 isScanning = false
                 scanRequested = false
+                bluetoothLeScanner = null
                 mainHandler.removeCallbacks(staleDeviceRunnable)
                 mainHandler.removeCallbacks(renderRunnable)
                 renderScheduled = false
                 binding.statusText.setText(R.string.status_scan_failed)
                 binding.scanButton.setText(R.string.scan_devices)
                 binding.finderScanButton.setText(R.string.scan_devices)
+                renderDevices()
+                renderFinder()
             }
         }
     }
@@ -210,6 +215,7 @@ class MainActivity : AppCompatActivity() {
         if (bluetoothAdapter == null) {
             binding.statusText.setText(R.string.status_unsupported)
             binding.scanButton.isEnabled = false
+            binding.finderScanButton.isEnabled = false
         }
     }
 
@@ -242,10 +248,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
-        outState.putString(STATE_SELECTED_ADDRESS, selectedAddress)
-        outState.putString(STATE_SELECTED_NAME, selectedName)
+        val finderVisible = binding.finderPanel.isVisible
         outState.putBoolean(STATE_SCAN_REQUESTED, scanRequested)
-        outState.putBoolean(STATE_FINDER_VISIBLE, binding.finderPanel.isVisible)
+        outState.putBoolean(STATE_FINDER_VISIBLE, finderVisible)
+
+        if (finderVisible) {
+            outState.putString(STATE_SELECTED_ADDRESS, selectedAddress)
+            outState.putString(STATE_SELECTED_NAME, selectedName)
+        }
+
         super.onSaveInstanceState(outState)
     }
 
@@ -285,6 +296,7 @@ class MainActivity : AppCompatActivity() {
             binding.statusText.setText(R.string.status_location_services_off)
             binding.scanButton.setText(R.string.open_settings)
             binding.finderScanButton.setText(R.string.open_settings)
+            renderFinder()
             return
         }
 
@@ -301,6 +313,7 @@ class MainActivity : AppCompatActivity() {
     private fun startBleScan(clearExisting: Boolean) {
         if (!hasRequiredPermissions()) {
             showPermissionRequired()
+            renderFinder()
             return
         }
 
@@ -308,6 +321,7 @@ class MainActivity : AppCompatActivity() {
         val scanner = adapter.bluetoothLeScanner
         if (scanner == null) {
             binding.statusText.setText(R.string.status_scan_failed)
+            renderFinder()
             return
         }
 
@@ -336,9 +350,11 @@ class MainActivity : AppCompatActivity() {
         } catch (exception: SecurityException) {
             scanRequested = false
             showPermissionRequired()
+            renderFinder()
         } catch (exception: IllegalStateException) {
             scanRequested = false
             binding.statusText.setText(R.string.status_scan_failed)
+            renderFinder()
         }
     }
 
@@ -353,6 +369,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         isScanning = false
+        bluetoothLeScanner = null
         if (clearRequest) {
             scanRequested = false
         }
@@ -449,6 +466,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showDeviceList() {
+        selectedAddress = null
+        selectedName = null
         binding.finderPanel.isVisible = false
         binding.homePanel.isVisible = true
     }
@@ -461,34 +480,32 @@ class MainActivity : AppCompatActivity() {
         binding.finderDeviceName.text = displayedName
         binding.finderDeviceAddress.text = address
 
+        if (!isScanning) {
+            showUnavailableFinderSignal(R.string.finder_scan_stopped)
+            return
+        }
+
         if (device == null) {
-            binding.finderSignalLabel.setText(R.string.signal_unavailable)
-            binding.finderSignalValue.setText(R.string.signal_dash)
-            binding.finderSignalProgress.setProgressCompat(0, true)
-            binding.finderWaitingText.isVisible = true
+            showUnavailableFinderSignal(R.string.finder_waiting)
             return
         }
 
         val displayedRssi = device.smoothedRssi.roundToInt()
-        binding.finderSignalLabel.text = signalLabel(displayedRssi)
+        binding.finderSignalLabel.setText(SignalStrength.labelResource(displayedRssi))
         binding.finderSignalValue.text = getString(R.string.rssi_value, displayedRssi)
-        binding.finderSignalProgress.setProgressCompat(signalProgress(displayedRssi), true)
+        binding.finderSignalProgress.setProgressCompat(
+            SignalStrength.progress(displayedRssi),
+            true
+        )
         binding.finderWaitingText.isVisible = false
     }
 
-    private fun signalLabel(rssi: Int): String {
-        val resourceId = when {
-            rssi >= -55 -> R.string.signal_very_strong
-            rssi >= -67 -> R.string.signal_strong
-            rssi >= -78 -> R.string.signal_fair
-            else -> R.string.signal_weak
-        }
-        return getString(resourceId)
-    }
-
-    private fun signalProgress(rssi: Int): Int {
-        val bounded = rssi.coerceIn(RSSI_MIN, RSSI_MAX)
-        return ((bounded - RSSI_MIN) * 100) / (RSSI_MAX - RSSI_MIN)
+    private fun showUnavailableFinderSignal(messageResource: Int) {
+        binding.finderSignalLabel.setText(R.string.signal_unavailable)
+        binding.finderSignalValue.setText(R.string.signal_dash)
+        binding.finderSignalProgress.setProgressCompat(0, true)
+        binding.finderWaitingText.setText(messageResource)
+        binding.finderWaitingText.isVisible = true
     }
 
     private fun requiredPermissions(): Array<String> {
@@ -580,8 +597,6 @@ class MainActivity : AppCompatActivity() {
         private const val DEVICE_REFRESH_INTERVAL_MS = 1_000L
         private const val DEVICE_RENDER_INTERVAL_MS = 250L
         private const val RSSI_SMOOTHING_ALPHA = 0.25
-        private const val RSSI_MIN = -100
-        private const val RSSI_MAX = -35
         private const val DIALOG_WIDTH_RATIO = 0.90
     }
 }
