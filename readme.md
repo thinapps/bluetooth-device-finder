@@ -20,6 +20,8 @@ Current status: early development prototype; not yet production-ready.
 - show advertised names, Bluetooth addresses, paired status, and RSSI readings
 - provide Finder Mode with stronger and weaker signal guidance instead of an exact-distance estimate
 - remove stale Finder readings immediately when scanning stops or fails
+- start a fresh scan session after returning to the foreground and recover cleanly from permission changes
 - handle Nearby devices permission on Android 12 and newer and legacy location requirements on older Android versions
-- support scrolling in Finder Mode and information dialogs on constrained layouts
+- support constrained layouts with scrollable Finder and information screens plus reduced landscape spacing
 - include adaptive launcher icons, local-only Privacy Policy, and About dialogs
+- keep local project configuration independent from release signing secrets
