@@ -42,6 +42,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
                 android:textColor="@color/app_text_secondary"
+                android:textDirection="ltr"
                 android:textSize="@dimen/text_caption" />
 
             <TextView
