@@ -19,5 +19,7 @@ Current status: early development prototype; not yet production-ready.
 - sort detectable devices by smoothed live signal strength
 - show advertised names, Bluetooth addresses, paired status, and RSSI readings
 - provide Finder Mode with stronger and weaker signal guidance instead of an exact-distance estimate
+- remove stale Finder readings immediately when scanning stops or fails
 - handle Nearby devices permission on Android 12 and newer and legacy location requirements on older Android versions
-- include local-only Privacy Policy and About dialogs
+- support scrolling in Finder Mode and information dialogs on constrained layouts
+- include adaptive launcher icons, local-only Privacy Policy, and About dialogs
