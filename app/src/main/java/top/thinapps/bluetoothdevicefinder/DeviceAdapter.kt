@@ -17,12 +17,18 @@ class DeviceAdapter(
     }
 
     fun submitDevices(updatedDevices: List<NearbyDevice>) {
-        devices = updatedDevices.map { device -> device.copy() }
+        if (devices == updatedDevices) {
+            return
+        }
+
+        devices = updatedDevices.toList()
         notifyDataSetChanged()
     }
 
     override fun getItemId(position: Int): Long {
-        return devices[position].address.hashCode().toLong()
+        val compactAddress = devices[position].address.replace(":", "")
+        return compactAddress.toLongOrNull(16)
+            ?: devices[position].address.hashCode().toLong()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DeviceViewHolder {
