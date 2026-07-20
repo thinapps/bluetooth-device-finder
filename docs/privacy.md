@@ -16,7 +16,11 @@ The app processes this information locally to sort the device list and update Fi
 
 ## Storage and Retention
 
-The current version does not save scan history, selected devices, Bluetooth addresses, signal readings, or location data to persistent storage. Visible state may be retained temporarily while Android recreates the activity, and all scan data disappears when the app process ends.
+The current version does not save scan history, Bluetooth addresses, signal readings, or location data to persistent storage.
+
+Stopping a scan leaves the current result list visible in the active screen so the user can review it. Starting a new scan clears that list before collecting fresh results. Returning from Finder Mode clears the selected device, and closing the activity removes the in-memory result list.
+
+Android may temporarily restore the selected device name and address when recreating a visible Finder Mode screen, such as after rotation. This restoration is limited to visible interface state and is not a saved scan history.
 
 ## Network and Third Parties
 
@@ -28,7 +32,7 @@ Android 12 and newer use the Nearby devices permission. Android 11 and older req
 
 ## Deletion
 
-Because scan results are temporary, stopping the scan or closing the app removes them from the active interface. Uninstalling the app removes the application and any normal Android-managed app state.
+Starting a new scan replaces the current in-memory result list. Returning to the device list clears the current Finder selection. Closing the activity or uninstalling the app removes all remaining application state that this version creates.
 
 ## Changes
 
