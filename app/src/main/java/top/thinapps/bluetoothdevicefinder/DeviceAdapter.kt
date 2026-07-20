@@ -49,7 +49,7 @@ class DeviceAdapter(
         fun bind(device: NearbyDevice) {
             val context = binding.root.context
             val displayedRssi = device.smoothedRssi.roundToInt()
-            val signalLabel = signalLabel(context, displayedRssi)
+            val signalLabel = context.getString(SignalStrength.labelResource(displayedRssi))
 
             binding.deviceName.text = device.name
             binding.deviceAddress.text = device.address
@@ -71,15 +71,5 @@ class DeviceAdapter(
                 onDeviceSelected(device)
             }
         }
-    }
-
-    private fun signalLabel(context: android.content.Context, rssi: Int): String {
-        val resourceId = when {
-            rssi >= -55 -> R.string.signal_very_strong
-            rssi >= -67 -> R.string.signal_strong
-            rssi >= -78 -> R.string.signal_fair
-            else -> R.string.signal_weak
-        }
-        return context.getString(resourceId)
     }
 }
