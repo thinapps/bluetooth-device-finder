@@ -93,7 +93,10 @@ jobs:
           echo "AAB_FILE=$AAB_FILE" >> "$GITHUB_ENV"
 
       - name: Verify AAB signature
-        run: jarsigner -verify "$AAB_FILE"
+        run: |
+          set -euo pipefail
+          jarsigner -verify "$AAB_FILE" 2>&1 | tee jarsigner-output.txt
+          grep -Fq "jar verified." jarsigner-output.txt
 
       - name: Upload build logs
         if: failure()
@@ -107,6 +110,7 @@ jobs:
             ~/.gradle/caches/**/kotlin/**
             ./**/build/outputs/logs/**
             ./**/build/*/reports/**
+            jarsigner-output.txt
 
       - name: Upload AAB artifact
         if: success()
