@@ -21,7 +21,7 @@ The legacy permissions are limited to Android 11 and older with `maxSdkVersion="
 
 The app asks for permission only after the user taps **Scan devices**. After a normal denial, the app allows the user to request access again. If Android no longer allows another in-app request, the app provides access to its Android settings.
 
-Bluetooth scanning stops when the app leaves the foreground.
+Bluetooth scanning stops when the app leaves the foreground. An active scan also stops if Bluetooth, the required permission, or legacy location services become unavailable.
 
 ## Permissions Not Used
 
