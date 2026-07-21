@@ -16,7 +16,7 @@ Version 0.1.0 supports:
 - permission denial and settings recovery
 - light and dark system themes
 
-All scan results remain temporary and are discarded when the app process ends.
+Scan results remain in memory only and are not stored as scan history. Android may temporarily restore the selected device name and address when recreating a visible Finder Mode screen, such as after rotation; this is limited to visible interface state.
 
 ## Detection Limits
 
