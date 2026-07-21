@@ -95,8 +95,8 @@ jobs:
       - name: Verify AAB signature
         run: |
           set -euo pipefail
-          jarsigner -verify "$AAB_FILE" 2>&1 | tee jarsigner-output.txt
-          grep -Fq "jar verified." jarsigner-output.txt
+          LC_ALL=C jarsigner -verify "$AAB_FILE" 2>&1 | tee jarsigner-output.txt
+          grep -Fxq "jar verified." jarsigner-output.txt
 
       - name: Upload build logs
         if: failure()
