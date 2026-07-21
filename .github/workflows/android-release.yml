@@ -102,14 +102,11 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: gradle-and-kotlin-logs
+          name: release-build-logs
           path: |
             **/build/reports/**
+            **/build/outputs/logs/**
             **/build/tmp/kotlin-compile*/**
-            ~/.gradle/daemon/*/daemon-*.out.log
-            ~/.gradle/caches/**/kotlin/**
-            ./**/build/outputs/logs/**
-            ./**/build/*/reports/**
             jarsigner-output.txt
 
       - name: Upload AAB artifact
