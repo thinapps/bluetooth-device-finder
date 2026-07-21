@@ -21,9 +21,12 @@ Current status: early development prototype; not yet production-ready.
 - provide Finder Mode with stronger and weaker signal guidance instead of an exact-distance estimate
 - remove stale Finder readings immediately when scanning stops or fails
 - start a fresh scan session after returning to the foreground and recover cleanly from permission changes
+- stop active scans when Bluetooth or required legacy location services become unavailable
 - handle Nearby devices permission on Android 12 and newer and legacy location requirements on older Android versions
 - update the nearby-device list by device identity instead of redrawing every row for timestamp-only changes
+- avoid no-op stale-device renders and remove unused raw RSSI state
 - support constrained layouts with scrollable Finder and information screens plus reduced landscape spacing
 - include adaptive launcher icons, local-only Privacy Policy, and About dialogs
 - keep local project configuration independent from release signing secrets
 - validate the generated release bundle has a positive JAR signature verification result
+- keep release failure artifacts limited to project build and signature logs
