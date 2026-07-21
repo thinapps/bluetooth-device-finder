@@ -13,7 +13,7 @@ The scan permission is declared with `neverForLocation`. The app does not derive
 
 ## Android 11 and Older
 
-Android requires the legacy `BLUETOOTH` and `BLUETOOTH_ADMIN` manifest permissions for scanning. Android 6 through Android 11 also require runtime `ACCESS_FINE_LOCATION` permission and enabled location services before Bluetooth scan results are delivered, even though this app does not calculate or store the user's location.
+Android requires the legacy `BLUETOOTH` and `BLUETOOTH_ADMIN` manifest permissions for scanning. Supported Android versions through Android 11 also require runtime `ACCESS_FINE_LOCATION` permission and enabled location services before Bluetooth scan results are delivered, even though this app does not calculate or store the user's location.
 
 The legacy permissions are limited to Android 11 and older with `maxSdkVersion="30"`.
 
