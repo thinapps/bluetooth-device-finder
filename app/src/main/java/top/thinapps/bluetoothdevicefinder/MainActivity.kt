@@ -454,10 +454,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleBluetoothUnavailable() {
-        if (!isScanning && !scanRequested) {
-            return
-        }
-
         resetScanState(clearRequest = true)
         binding.statusText.setText(R.string.status_bluetooth_off)
         setScanButtonText(R.string.scan_devices)
