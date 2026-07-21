@@ -10,7 +10,10 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.Paint
@@ -50,6 +53,7 @@ class MainActivity : AppCompatActivity() {
 
     private var bluetoothAdapter: BluetoothAdapter? = null
     private var bluetoothLeScanner: BluetoothLeScanner? = null
+    private var bluetoothStateReceiverRegistered = false
     private var isScanning = false
     private var scanRequested = false
     private var permissionPermanentlyDenied = false
@@ -81,10 +85,26 @@ class MainActivity : AppCompatActivity() {
         } else if (isBluetoothEnabled()) {
             startBleScan(clearExisting = true)
         } else {
-            resetScanState(clearRequest = true)
-            binding.statusText.setText(R.string.status_bluetooth_off)
-            setScanButtonText(R.string.scan_devices)
-            renderFinder()
+            handleBluetoothUnavailable()
+        }
+    }
+
+    private val bluetoothStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != BluetoothAdapter.ACTION_STATE_CHANGED) {
+                return
+            }
+
+            val state = intent.getIntExtra(
+                BluetoothAdapter.EXTRA_STATE,
+                BluetoothAdapter.ERROR
+            )
+            if (
+                state == BluetoothAdapter.STATE_OFF ||
+                state == BluetoothAdapter.STATE_TURNING_OFF
+            ) {
+                handleBluetoothUnavailable()
+            }
         }
     }
 
@@ -123,16 +143,35 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
+            if (!hasRequiredPermissions()) {
+                handlePermissionLoss()
+                return
+            }
+
+            if (!isBluetoothEnabled()) {
+                handleBluetoothUnavailable()
+                return
+            }
+
+            if (requiresLegacyLocationServices() && !isLegacyLocationEnabled()) {
+                handleLegacyLocationUnavailable()
+                return
+            }
+
             val now = SystemClock.elapsedRealtime()
             val iterator = devices.iterator()
+            var devicesRemoved = false
             while (iterator.hasNext()) {
                 val entry = iterator.next()
                 if (now - entry.value.lastSeenElapsedTime > DEVICE_STALE_AFTER_MS) {
                     iterator.remove()
+                    devicesRemoved = true
                 }
             }
 
-            scheduleRender()
+            if (devicesRemoved) {
+                scheduleRender()
+            }
             mainHandler.postDelayed(this, DEVICE_REFRESH_INTERVAL_MS)
         }
     }
@@ -212,6 +251,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        registerBluetoothStateReceiver()
 
         if (!scanRequested || isScanning) {
             return
@@ -249,6 +289,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         stopBleScan(clearRequest = false)
+        unregisterBluetoothStateReceiver()
         super.onStop()
     }
 
@@ -304,11 +345,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         if (requiresLegacyLocationServices() && !isLegacyLocationEnabled()) {
-            scanRequested = false
-            legacyLocationUnavailable = true
-            binding.statusText.setText(R.string.status_location_services_off)
-            setScanButtonText(R.string.open_settings)
-            renderFinder()
+            handleLegacyLocationUnavailable()
             return
         }
 
@@ -416,6 +453,27 @@ class MainActivity : AppCompatActivity() {
         renderFinder()
     }
 
+    private fun handleBluetoothUnavailable() {
+        if (!isScanning && !scanRequested) {
+            return
+        }
+
+        resetScanState(clearRequest = true)
+        binding.statusText.setText(R.string.status_bluetooth_off)
+        setScanButtonText(R.string.scan_devices)
+        renderDevices()
+        renderFinder()
+    }
+
+    private fun handleLegacyLocationUnavailable() {
+        resetScanState(clearRequest = true)
+        legacyLocationUnavailable = true
+        binding.statusText.setText(R.string.status_location_services_off)
+        setScanButtonText(R.string.open_settings)
+        renderDevices()
+        renderFinder()
+    }
+
     private fun showScanFailure() {
         resetScanState(clearRequest = true)
         binding.statusText.setText(R.string.status_scan_failed)
@@ -464,7 +522,6 @@ class MainActivity : AppCompatActivity() {
         devices[address] = NearbyDevice(
             address = address,
             name = resolvedName,
-            latestRssi = result.rssi,
             smoothedRssi = smoothedRssi,
             lastSeenElapsedTime = SystemClock.elapsedRealtime(),
             paired = paired
@@ -612,7 +669,12 @@ class MainActivity : AppCompatActivity() {
         if (!hasRequiredPermissions()) {
             return false
         }
-        return bluetoothAdapter?.isEnabled == true
+
+        return try {
+            bluetoothAdapter?.isEnabled == true
+        } catch (exception: SecurityException) {
+            false
+        }
     }
 
     private fun requiresLegacyLocationServices(): Boolean {
@@ -622,6 +684,29 @@ class MainActivity : AppCompatActivity() {
     private fun isLegacyLocationEnabled(): Boolean {
         val locationManager = getSystemService(LocationManager::class.java)
         return locationManager != null && LocationManagerCompat.isLocationEnabled(locationManager)
+    }
+
+    private fun registerBluetoothStateReceiver() {
+        if (bluetoothStateReceiverRegistered || bluetoothAdapter == null) {
+            return
+        }
+
+        ContextCompat.registerReceiver(
+            this,
+            bluetoothStateReceiver,
+            IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED),
+            ContextCompat.RECEIVER_EXPORTED
+        )
+        bluetoothStateReceiverRegistered = true
+    }
+
+    private fun unregisterBluetoothStateReceiver() {
+        if (!bluetoothStateReceiverRegistered) {
+            return
+        }
+
+        unregisterReceiver(bluetoothStateReceiver)
+        bluetoothStateReceiverRegistered = false
     }
 
     private fun openAppSettings() {
