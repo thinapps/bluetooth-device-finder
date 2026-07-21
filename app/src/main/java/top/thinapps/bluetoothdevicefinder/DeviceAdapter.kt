@@ -26,6 +26,11 @@ class DeviceAdapter(
             ?: getItem(position).address.hashCode().toLong()
     }
 
+    override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
+        super.onAttachedToRecyclerView(recyclerView)
+        recyclerView.itemAnimator = null
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DeviceViewHolder {
         val binding = ItemDeviceBinding.inflate(
             LayoutInflater.from(parent.context),
