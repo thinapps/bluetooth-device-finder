@@ -34,7 +34,7 @@ A signed release build reads all four of these Gradle properties:
 - `RELEASE_KEY_ALIAS`
 - `RELEASE_KEY_PASSWORD`
 
-Release signing is enabled only when all four properties are available. The manual GitHub Actions workflow validates its repository secrets, writes the properties securely, restores the upload keystore inside the job, builds the AAB, and verifies the resulting signature.
+Release signing is enabled only when all four properties are available. The manual GitHub Actions workflow validates its repository secrets, writes the properties securely, restores the upload keystore inside the job, builds the AAB, and runs `jarsigner` against the generated artifact. The workflow requires the positive `jar verified.` result instead of relying only on the command exit code, and preserves the verification output with the failure logs.
 
 ## Release Configuration
 
