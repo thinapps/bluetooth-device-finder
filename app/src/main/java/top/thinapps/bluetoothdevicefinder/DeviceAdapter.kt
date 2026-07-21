@@ -2,33 +2,28 @@ package top.thinapps.bluetoothdevicefinder
 
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import top.thinapps.bluetoothdevicefinder.databinding.ItemDeviceBinding
 import kotlin.math.roundToInt
 
 class DeviceAdapter(
     private val onDeviceSelected: (NearbyDevice) -> Unit
-) : RecyclerView.Adapter<DeviceAdapter.DeviceViewHolder>() {
-
-    private var devices: List<NearbyDevice> = emptyList()
+) : ListAdapter<NearbyDevice, DeviceAdapter.DeviceViewHolder>(DIFF_CALLBACK) {
 
     init {
         setHasStableIds(true)
     }
 
     fun submitDevices(updatedDevices: List<NearbyDevice>) {
-        if (devices == updatedDevices) {
-            return
-        }
-
-        devices = updatedDevices.toList()
-        notifyDataSetChanged()
+        submitList(updatedDevices.toList())
     }
 
     override fun getItemId(position: Int): Long {
-        val compactAddress = devices[position].address.replace(":", "")
+        val compactAddress = getItem(position).address.replace(":", "")
         return compactAddress.toLongOrNull(16)
-            ?: devices[position].address.hashCode().toLong()
+            ?: getItem(position).address.hashCode().toLong()
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DeviceViewHolder {
@@ -41,11 +36,7 @@ class DeviceAdapter(
     }
 
     override fun onBindViewHolder(holder: DeviceViewHolder, position: Int) {
-        holder.bind(devices[position])
-    }
-
-    override fun getItemCount(): Int {
-        return devices.size
+        holder.bind(getItem(position))
     }
 
     inner class DeviceViewHolder(
@@ -75,6 +66,26 @@ class DeviceAdapter(
             ).joinToString(", ")
             binding.root.setOnClickListener {
                 onDeviceSelected(device)
+            }
+        }
+    }
+
+    companion object {
+        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<NearbyDevice>() {
+            override fun areItemsTheSame(
+                oldItem: NearbyDevice,
+                newItem: NearbyDevice
+            ): Boolean {
+                return oldItem.address == newItem.address
+            }
+
+            override fun areContentsTheSame(
+                oldItem: NearbyDevice,
+                newItem: NearbyDevice
+            ): Boolean {
+                return oldItem.name == newItem.name &&
+                    oldItem.paired == newItem.paired &&
+                    oldItem.smoothedRssi.roundToInt() == newItem.smoothedRssi.roundToInt()
             }
         }
     }
